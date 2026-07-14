@@ -1,0 +1,1165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Event-Driven Architecture Pro Playbook</title>
+<meta name="description" content="The messaging half of distributed systems — queues, streams, Kafka, delivery semantics, event sourcing, CQRS, sagas, the outbox. Each topic with What/Why/How, an ASCII diagram, two analogies, plain-English, real code, and the gotcha that bites.">
+<style>
+:root{
+  --bg:#0b0e14; --panel:#11151f; --card:#121826; --card2:#0f1420;
+  --border:#242c3d; --border2:#2e3850;
+  --text:#dce3f0; --muted:#8f99ad; --dim:#6b7488;
+  --evt:#fb923c; --pat:#a78bfa; --prod:#22d3ee;
+  --green:#4ade80; --red:#f87171; --amber:#fbbf24; --blue:#60a5fa;
+  --k:#ff7b9c; --s:#9ece6a; --key:#7aa2f7; --n:#ff9e64; --com:#565f89; --v:#e0af68; --cmd:#5eead4; --prompt:#565f89; --fn:#c4b5fd;
+}
+*{box-sizing:border-box; margin:0; padding:0}
+html{scroll-behavior:smooth}
+body{
+  background:
+    radial-gradient(1100px 520px at 18% -10%, #2a1a0c 0%, transparent 55%),
+    radial-gradient(900px 460px at 85% -8%, #1a1030 0%, transparent 55%),
+    var(--bg);
+  color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  line-height:1.6; font-size:16px;
+}
+.wrap{max-width:980px; margin:0 auto; padding:0 20px 80px}
+
+.hero{padding:56px 0 8px; text-align:center}
+.badge{
+  display:inline-block; font-size:.72rem; letter-spacing:.18em; text-transform:uppercase;
+  color:var(--evt); border:1px solid #3d2c14; background:#1c1409;
+  padding:6px 14px; border-radius:999px; font-weight:600;
+}
+h1{
+  font-size:2.5rem; margin:18px 0 10px; letter-spacing:-.02em;
+  background:linear-gradient(100deg,#fb923c,#a78bfa 60%,#22d3ee);
+  -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
+}
+.sub{color:var(--muted); max-width:680px; margin:0 auto; font-size:1.02rem}
+.spec{display:inline-block; margin-top:12px; font-size:.76rem; color:var(--dim); border:1px solid var(--border); background:var(--panel); padding:4px 12px; border-radius:999px}
+.legend{display:flex; gap:14px; justify-content:center; flex-wrap:wrap; margin-top:16px; font-size:.78rem; color:var(--muted)}
+.legend span{display:inline-flex; align-items:center; gap:6px}
+.legend i{width:10px; height:10px; border-radius:3px; display:inline-block}
+
+.toolbar{position:sticky; top:0; z-index:50; display:flex; justify-content:center; gap:8px; padding:10px 0; margin-top:18px; background:linear-gradient(var(--bg) 80%,transparent)}
+.toolbar button{background:var(--panel); color:var(--muted); border:1px solid var(--border); border-radius:8px; padding:6px 13px; font-size:.85rem; cursor:pointer; font-weight:600}
+.toolbar button:hover{color:var(--text); border-color:var(--border2)}
+
+.toc{display:flex; flex-wrap:wrap; gap:7px; justify-content:center; margin:22px 0 10px}
+.toc a{display:inline-flex; align-items:center; gap:7px; text-decoration:none; background:var(--panel); border:1px solid var(--border); color:var(--muted); font-size:.78rem; padding:5px 11px; border-radius:999px; transition:.15s}
+.toc a b{color:var(--evt); font-size:.72rem}
+.toc a.pat-chip b{color:var(--pat)}
+.toc a.prod-chip b{color:var(--prod)}
+.toc a:hover{color:var(--text); border-color:var(--border2); background:#161b28}
+
+.part{margin:64px 0 8px; text-align:center; font-size:.8rem; letter-spacing:.28em; text-transform:uppercase; color:var(--dim); font-weight:700}
+.part span{color:var(--evt)}
+.part.pat span{color:var(--pat)}
+.part.prod span{color:var(--prod)}
+
+details.card{background:var(--card); border:1px solid var(--border); border-radius:14px; margin:14px 0; overflow:hidden}
+details.card[open]{border-color:var(--border2)}
+summary{list-style:none; cursor:pointer; padding:16px 20px; display:flex; align-items:baseline; gap:14px; user-select:none}
+summary::-webkit-details-marker{display:none}
+summary:hover{background:var(--card2)}
+.num{font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-weight:800; color:var(--evt); font-size:1.05rem; min-width:30px}
+.pat-card .num{color:var(--pat)}
+.prod-card .num{color:var(--prod)}
+.ttl{font-weight:700; font-size:1.06rem; flex:1}
+.star{font-size:.66rem; font-weight:700; letter-spacing:.06em; white-space:nowrap; color:var(--amber); border:1px solid #4d3d1a; background:#211a0b; padding:2px 9px; border-radius:999px}
+.chev{color:var(--dim); transition:.2s; font-size:.8rem}
+details[open] .chev{transform:rotate(90deg)}
+.body{padding:4px 22px 22px; border-top:1px solid var(--border)}
+.scenario{color:var(--muted); margin:14px 0 4px}
+.scenario b{color:var(--text)}
+
+.wwh{display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin:16px 0}
+@media(max-width:640px){.wwh{grid-template-columns:1fr}}
+.wwh > div{background:var(--card2); border:1px solid var(--border); border-radius:10px; padding:11px 14px}
+.wwh h5{font-size:.68rem; letter-spacing:.12em; text-transform:uppercase; margin-bottom:5px; font-weight:800}
+.wwh .what h5{color:var(--blue)} .wwh .why h5{color:var(--amber)} .wwh .how h5{color:var(--green)}
+.wwh p{font-size:.9rem; color:#c2ccdb}
+.wwh code{font-family:ui-monospace,Menlo,monospace; font-size:.85em; color:#c4b5fd}
+
+.ascii{margin:16px 0; border:1px solid #3d2c14; border-radius:10px; overflow:hidden; background:#160f04}
+.ascii .lbl{font-size:.7rem; letter-spacing:.14em; text-transform:uppercase; font-weight:700; color:var(--evt); background:#1c1409; padding:6px 14px; border-bottom:1px solid #3d2c14}
+.ascii pre{background:transparent; padding:16px; overflow-x:auto; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:.82rem; line-height:1.5; color:#e6cfa6; white-space:pre}
+
+.analogy{display:flex; gap:12px; margin:12px 0; padding:13px 16px; background:#1c1409; border:1px solid #3d2c14; border-left:3px solid #fb923c; border-radius:0 10px 10px 0; color:#e6cdb0; font-size:.95rem}
+.analogy.two{background:#150f22; border-color:#2c2645; border-left-color:#a78bfa; color:#c7bfe8}
+.analogy .ic{font-size:1.1rem}
+.analogy b{color:#fed7aa}
+.analogy.two b{color:#ddd6fe}
+
+.code{margin:14px 0; border:1px solid var(--border); border-radius:10px; overflow:hidden}
+.code-label{font-size:.7rem; letter-spacing:.14em; text-transform:uppercase; font-weight:700; color:var(--dim); background:var(--card2); padding:6px 14px; border-bottom:1px solid var(--border)}
+pre{background:#0c1018; padding:14px 16px; overflow-x:auto; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:.85rem; line-height:1.55; color:#c8d3e8}
+.out pre{color:#9ac795}
+.k{color:var(--k)} .s{color:var(--s)} .key{color:var(--key)} .n{color:var(--n)}
+.com{color:var(--com); font-style:italic} .v{color:var(--v)} .cmd{color:var(--cmd); font-weight:600} .prompt{color:var(--prompt)} .fn{color:var(--fn)}
+
+.simple{display:flex; gap:12px; margin:16px 0; padding:14px 16px; background:#0e1a17; border:1px solid #1f3d33; border-left:3px solid #34d399; border-radius:0 10px 10px 0; color:#bfe8d6; font-size:.96rem}
+.simple .ic{font-size:1.15rem}
+.simple b{color:#6ee7b7}
+.simple .tag{display:block; font-size:.66rem; letter-spacing:.1em; text-transform:uppercase; color:#34d399; font-weight:800; margin-bottom:3px}
+
+table{border-collapse:collapse; width:100%; margin:14px 0; font-size:.87rem}
+th,td{border:1px solid var(--border); padding:7px 12px; text-align:left}
+th{background:var(--card2); color:var(--muted); font-size:.78rem; text-transform:uppercase; letter-spacing:.08em}
+td{font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.84rem}
+
+.dodont{display:grid; grid-template-columns:1fr 1fr; gap:12px; margin:16px 0}
+@media(max-width:720px){.dodont{grid-template-columns:1fr}}
+.do,.dont{border-radius:10px; padding:13px 16px; font-size:.92rem}
+.do{background:#0d1a12; border:1px solid #1e3a28}
+.dont{background:#1d1012; border:1px solid #43222a}
+.do h4{color:var(--green); font-size:.82rem; margin-bottom:8px; letter-spacing:.04em}
+.dont h4{color:var(--red); font-size:.82rem; margin-bottom:8px; letter-spacing:.04em}
+.do ul,.dont ul{margin-left:18px}
+.do li,.dont li{margin:5px 0; color:#b8c2d4}
+.do li::marker{color:var(--green)} .dont li::marker{color:var(--red)}
+.do code,.dont code,.gotcha code,.scenario code,.analogy code,.simple code{font-family:ui-monospace,Menlo,monospace; font-size:.85em; background:#0c1018; border:1px solid var(--border); padding:1px 6px; border-radius:5px; color:#c4b5fd}
+
+.gotcha{margin:14px 0; padding:13px 16px; border-radius:0 10px 10px 0; font-size:.94rem; background:#1e1610; border:1px solid #43301a; border-left:3px solid var(--amber); color:#dcc6a4}
+.gotcha b{color:#fcd34d}
+
+.quiz{background:var(--card); border:1px solid var(--border); border-radius:14px; padding:26px; margin:20px 0}
+.quiz .qhead{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:6px}
+.quiz .qintro{color:var(--muted);font-size:.95rem;max-width:640px}
+.quiz .qmeta{font-size:.85rem;color:var(--dim);white-space:nowrap}
+.quiz .qmeta b{color:var(--evt)}
+.progress{height:7px;background:var(--card2);border:1px solid var(--border);border-radius:999px;overflow:hidden;margin:14px 0 4px}
+.progress > i{display:block;height:100%;width:0;background:linear-gradient(90deg,#fb923c,#a78bfa);transition:width .4s}
+.q{margin:20px 0;padding-bottom:18px;border-bottom:1px solid var(--border)}
+.q p.qt{font-weight:700;margin-bottom:10px}
+.q p.qt .tag{font-size:.68rem;font-weight:700;color:var(--evt);border:1px solid var(--border);background:var(--card2);border-radius:999px;padding:1px 8px;margin-right:8px;letter-spacing:.04em}
+.q label{display:block;padding:7px 12px;margin:5px 0;border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:.93rem;color:var(--muted)}
+.q label:hover{border-color:var(--border2);color:var(--text)}
+.q label.right{border-color:var(--green);color:var(--green);background:#0d1a12}
+.q label.wrong{border-color:var(--red);color:var(--red);background:#1d1012}
+.q.revealed label{cursor:default}
+.q .why{display:none;margin-top:8px;font-size:.88rem;color:var(--amber)}
+.q.revealed .why{display:block}
+.quiz .btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;align-items:center}
+.quiz button.check{background:var(--evt);color:#1c1409;border:0;padding:10px 22px;border-radius:10px;font-weight:700;font-size:.92rem;cursor:pointer}
+.quiz button.next{background:#1c2333;color:var(--text);border:1px solid var(--border2);padding:10px 22px;border-radius:10px;font-weight:700;font-size:.92rem;cursor:pointer}
+.quiz button.reset{background:transparent;color:var(--dim);border:1px solid var(--border);font-weight:600;font-size:.82rem;padding:7px 14px;border-radius:10px;cursor:pointer}
+.quiz button:hover{filter:brightness(1.08)}
+.quiz .roundscore{font-weight:700;color:var(--evt);font-size:1rem;margin-left:6px}
+.quiz .done{display:none;text-align:center;padding:14px}
+.quiz .done h3{font-size:1.4rem;margin-bottom:8px;color:var(--evt)}
+.quiz .done p{color:var(--muted)}
+
+footer{margin-top:60px; text-align:center; color:var(--dim); font-size:.85rem; line-height:1.7}
+footer a{color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <span class="badge">Architecture · Event-Driven · Field Guide</span>
+  <h1>Event-Driven Architecture Pro Playbook</h1>
+  <p class="sub">The <b>messaging</b> half of distributed systems — queues, streams, Kafka, delivery semantics, event sourcing, CQRS, sagas, and the outbox. Explained for students <i>and</i> pros.</p>
+  <div class="spec">Companion to the Distributed Systems playbook — that half is the machinery; this half is how services talk</div>
+  <div class="legend">
+    <span><i style="background:var(--blue)"></i> What it is</span>
+    <span><i style="background:var(--amber)"></i> Why it matters</span>
+    <span><i style="background:var(--green)"></i> How it works</span>
+    <span><i style="background:#34d399"></i> In plain words</span>
+    <span><i style="background:var(--evt)"></i> ASCII diagram</span>
+  </div>
+</header>
+
+<div class="toolbar">
+  <button onclick="fz(-1)">A−</button>
+  <button onclick="fz(0)">A</button>
+  <button onclick="fz(1)">A+</button>
+  <button onclick="toggleAll(true)">Expand all</button>
+  <button onclick="toggleAll(false)">Collapse all</button>
+</div>
+
+<nav class="toc">
+  <a href="#t1"><b>01</b>Sync vs async</a>
+  <a href="#t2"><b>02</b>Queues vs streams</a>
+  <a href="#t3"><b>03</b>Pub/sub &amp; fan-out</a>
+  <a href="#t4"><b>04</b>Kafka fundamentals</a>
+  <a href="#t5"><b>05</b>Delivery semantics</a>
+  <a href="#t6"><b>06</b>Idempotent consumers</a>
+  <a href="#t7"><b>07</b>Ordering &amp; partitioning</a>
+  <a href="#t8"><b>08</b>Choreography vs orchestration</a>
+  <a class="pat-chip" href="#t9"><b>09</b>Event sourcing</a>
+  <a class="pat-chip" href="#t10"><b>10</b>CQRS</a>
+  <a class="pat-chip" href="#t11"><b>11</b>The Saga pattern</a>
+  <a class="pat-chip" href="#t12"><b>12</b>The outbox pattern</a>
+  <a class="pat-chip" href="#t13"><b>13</b>Dead letter queues</a>
+  <a class="prod-chip" href="#t14"><b>14</b>Schema evolution &amp; registry</a>
+  <a class="prod-chip" href="#t15"><b>15</b>Backpressure &amp; replay</a>
+  <a class="prod-chip" href="#t16"><b>16</b>Capstone: order system</a>
+  <a href="#quiz"><b>🎯</b>Quiz — 5 per round</a>
+</nav>
+
+<main>
+
+<div class="part">Part I · <span>Messaging Foundations</span></div>
+
+<details class="card" id="t1">
+<summary><span class="num">01</span><span class="ttl">Synchronous vs asynchronous communication</span><span class="star">★ start here</span><span class="chev">▶</span></summary>
+<div class="body">
+<p class="scenario"><b>Scenario:</b> checkout calls payment, which calls fraud, which calls email — all synchronously. One slow service and the whole chain hangs; one dead service and checkout fails entirely. Going <b>async</b> breaks that fragile chain.</p>
+
+<div class="wwh">
+  <div class="what"><h5>What</h5><p><b>Sync</b>: caller waits for the callee's reply (request/response, RPC). <b>Async</b>: caller emits a message/event and moves on; work happens later, decoupled.</p></div>
+  <div class="why"><h5>Why</h5><p>Sync couples availability and latency across services (one slow link stalls all). Async decouples them — services fail and recover independently.</p></div>
+  <div class="how"><h5>How</h5><p>Replace a blocking call with an event on a broker (queue/stream). Consumers process at their own pace; the producer doesn't wait.</p></div>
+</div>
+
+<div class="ascii"><div class="lbl">Blocking chain vs decoupled events</div><pre>  SYNC (coupled):  checkout→payment→fraud→email
+     any hop slow/down → checkout blocks or fails ❌
+
+  ASYNC (decoupled):
+     checkout ──event: OrderPlaced──► [ broker ]
+                                        │  ├─► payment (own pace)
+                                        │  ├─► fraud
+                                        │  └─► email
+     checkout returns instantly; consumers catch up if they lag/restart
+</pre></div>
+
+<div class="analogy"><span class="ic">🧠</span><div><b>Analogy 1 — phone call vs voicemail:</b> sync is a phone call — both must be free at once, and if they don't pick up, you're stuck. Async is voicemail — you leave the message and hang up; they listen when ready. The post office (broker) holds it meanwhile.</div></div>
+<div class="analogy two"><span class="ic">🍽️</span><div><b>Analogy 2 — a restaurant order ticket:</b> the waiter doesn't stand at the pass waiting for each dish (sync); they clip the ticket to the rail (async event) and serve other tables. The kitchen works the tickets at its own pace. The rail decouples front-of-house from the kitchen.</div></div>
+
+<div class="code"><div class="code-label">From blocking calls to an event</div><pre class="py"># SYNC: checkout is only as available as its slowest dependency
+def checkout(order):
+    payment.charge(order)      # blocks
+    fraud.check(order)         # blocks
+    email.send(order)          # blocks → 3 ways to fail the sale
+
+# ASYNC: emit once, return; consumers react independently
+def checkout(order):
+    db.save(order, status="placed")
+    broker.publish("OrderPlaced", order)   # fire and continue
+    return "ok"                # payment/fraud/email run downstream</pre></div>
+
+<div class="simple"><span class="ic">🧒</span><div><span class="tag">In plain words</span><b>Synchronous</b> is like a phone call — you both have to be available right now, and if they don't answer, you're stuck waiting. <b>Asynchronous</b> is like texting or leaving a voicemail — you send it and get on with your day; they handle it when they can. For services that don't need an instant answer, texting (events) is far sturdier than everyone phoning everyone.</div></div>
+
+<div class="dodont">
+<div class="do"><h4>✅ Do</h4><ul>
+<li>Use async events for work that can happen slightly later (email, analytics, fulfillment)</li>
+<li>Keep sync calls for reads you need <i>right now</i> to answer the user</li>
+<li>Return fast to the user; let downstream consumers do the heavy work</li>
+</ul></div>
+<div class="dont"><h4>❌ Don't</h4><ul>
+<li>Chain many synchronous calls — you multiply latency and failure (see the Distributed Systems playbook)</li>
+<li>Make everything async — debugging and user-facing reads get harder</li>
+</ul></div>
+</div>
+<div class="gotcha"><b>Gotcha:</b> async doesn't remove complexity, it <i>relocates</i> it — you trade "the call might fail" for "the event might arrive twice, out of order, or much later." You now need idempotent consumers (topic 6), ordering awareness (topic 7), and a way to trace a request across hops (see the Distributed Systems playbook). Teams that adopt events for decoupling but skip those inherit a new class of heisenbugs.</div>
+</div>
+</details>
+
+<details class="card" id="t2">
+<summary><span class="num">02</span><span class="ttl">Message queues vs event streams</span><span class="star">★ core idea</span><span class="chev">▶</span></summary>
+<div class="body">
+<p class="scenario"><b>Scenario:</b> you reach for "a queue" but the real choice is two different tools. A <b>task queue</b> (RabbitMQ/SQS) hands each job to one worker and deletes it. An <b>event stream</b> (Kafka) keeps an append-only log many consumers replay. Picking wrong causes pain.</p>
+
+<div class="wwh">
+  <div class="what"><h5>What</h5><p><b>Queue</b>: messages are consumed and removed; each goes to <i>one</i> worker (work distribution). <b>Stream</b>: an ordered, retained <i>log</i> many independent consumers read at their own offset.</p></div>
+  <div class="why"><h5>Why</h5><p>Queues excel at "do this job once." Streams excel at "many services react to the same facts, and can replay history." Different jobs.</p></div>
+  <div class="how"><h5>How</h5><p>Queue: push task → worker acks → gone. Stream: append event → each consumer group tracks its own position → data stays for a retention window.</p></div>
+</div>
+
+<div class="ascii"><div class="lbl">Consume-and-delete vs append-and-replay</div><pre>  QUEUE (RabbitMQ/SQS): one job → one worker, then gone
+     [j1 j2 j3] ──► worker A takes j1 (removed)
+                 ──► worker B takes j2 (removed)   work is SPLIT
+
+  STREAM (Kafka): append-only log, each consumer has its own offset
+     log: e1 e2 e3 e4 e5 ...
+          ▲billing@3   ▲search@5   ▲audit@1   (all read the SAME events,
+     replayable: reset audit to 0 to reprocess history)
+</pre></div>
+
+<div class="analogy"><span class="ic">🧠</span><div><b>Analogy 1 — a to-do inbox vs a newspaper archive:</b> a queue is a shared to-do inbox — you grab a task, do it, it's gone, and no one else does it. A stream is a newspaper archive — every subscriber reads the same editions at their own pace, and you can always re-read last month.</div></div>
+<div class="analogy two"><span class="ic">🎟️</span><div><b>Analogy 2 — deli ticket line vs a group chat history:</b> the queue is the deli — take a number, get served, ticket's used up. The stream is a group chat — everyone sees every message, new members can scroll up, and the same message informs many people.</div></div>
+
+<div class="code"><div class="code-label">Two tools, two shapes</div><pre class="py"># QUEUE — distribute work, each task done once
+queue.send("resize-image", {"id": 42})     # exactly one worker resizes it
+job = queue.receive(); process(job); job.ack()   # ack → removed
+
+# STREAM — publish a fact many services consume &amp; can replay
+stream.append("orders", {"type":"OrderPlaced","id":42})
+# billing, search, analytics each read from their OWN offset:
+for event in stream.consume("orders", group="billing", from_offset="last"):
+    handle(event)         # audit group can start from 0 to rebuild state</pre></div>
+
+<div class="simple"><span class="ic">🧒</span><div><span class="tag">In plain words</span>A <b>queue</b> is a stack of chores: a worker grabs one, does it, and it's gone — great for "this job must happen once." A <b>stream</b> is more like a diary that keeps every entry: many readers can each read the whole thing at their own speed, and you can re-read old entries. If several parts of your system need to react to the same news (and maybe re-read it later), you want a stream.</div></div>
+
+<div class="dodont">
+<div class="do"><h4>✅ Do</h4><ul>
+<li>Use a queue for one-time task distribution (resize this, send that email)</li>
+<li>Use a stream when many consumers need the same events, or you need replay (topic 15)</li>
+<li>Match retention to your replay needs — streams keep data, queues don't</li>
+</ul></div>
+<div class="dont"><h4>❌ Don't</h4><ul>
+<li>Use a task queue when you'll later want to add a new consumer of past events</li>
+<li>Treat Kafka like a work queue without understanding partitions (topics 4, 7)</li>
+</ul></div>
+</div>
+<div class="gotcha"><b>Gotcha:</b> the classic mistake is choosing a delete-on-consume queue, then months later needing a <i>new</i> service to process events that already happened — but they're gone forever. Streams keep history so you can add consumers and replay (topic 15); queues don't. Choosing "queue" for a domain of durable business facts is a decision you'll regret when requirements grow (topics 4, 9).</div>
+</div>
+</details>
+
+<details class="card" id="t3">
+<summary><span class="num">03</span><span class="ttl">Pub/sub &amp; fan-out</span><span class="chev">▶</span></summary>
+<div class="body">
+<p class="scenario"><b>Scenario:</b> when an order is placed, five teams want to know — billing, inventory, search, analytics, notifications. You don't want checkout to call all five. Instead it <b>publishes</b> one event and each team <b>subscribes</b>. That's pub/sub.</p>
+
+<div class="wwh">
+  <div class="what"><h5>What</h5><p><b>Publish/subscribe</b>: producers emit events to a topic without knowing who listens; any number of consumers subscribe. <b>Fan-out</b> = one event delivered to many.</p></div>
+  <div class="why"><h5>Why</h5><p>It decouples producers from consumers — you can add a new listener without touching the producer, the ultimate open/closed for architecture.</p></div>
+  <div class="how"><h5>How</h5><p>Publish to a topic/exchange; the broker copies the event to each subscriber (or each consumer group in a stream). New subscribers just join.</p></div>
+</div>
+
+<div class="ascii"><div class="lbl">One publish, many independent reactions</div><pre>                      ┌─► billing      (charge)
+   checkout           ├─► inventory    (reserve)
+   publish ──OrderPlaced──► [ topic ] ──┼─► search       (index)
+   (knows nobody)     ├─► analytics    (count)
+                      └─► notifications(email)
+   add a 6th consumer tomorrow → checkout code UNCHANGED
+</pre></div>
+
+<div class="analogy"><span class="ic">🧠</span><div><b>Analogy 1 — a radio broadcast:</b> the station transmits once; anyone with a receiver tunes in. It doesn't know or care how many are listening, and a new listener needs no permission. Publishing an event is broadcasting; subscribing is tuning in.</div></div>
+<div class="analogy two"><span class="ic">📰</span><div><b>Analogy 2 — a newsletter:</b> the author writes one issue; every subscriber gets a copy. Adding a subscriber doesn't change how the author writes. Cancel and you stop receiving — the author never knows. Producers and consumers stay blissfully independent.</div></div>
+
+<div class="code"><div class="code-label">Publisher knows nothing about subscribers</div><pre class="py"># producer — fire one event to a topic
+broker.publish("OrderPlaced", {"order_id": 42, "total": 90})
+
+# each consumer subscribes independently (own group = own copy)
+broker.subscribe("OrderPlaced", group="billing",   handler=charge)
+broker.subscribe("OrderPlaced", group="inventory", handler=reserve)
+broker.subscribe("OrderPlaced", group="search",    handler=index)
+# tomorrow: add group="loyalty" → zero changes to checkout</pre></div>
+
+<div class="simple"><span class="ic">🧒</span><div><span class="tag">In plain words</span>Instead of the checkout calling every team one by one, it just <b>announces</b> "an order was placed!" to a bulletin board. Every team that cares is <b>watching</b> that board and reacts on its own. Best part: a new team can start watching tomorrow, and checkout never has to know or change. Announce once, many listen.</div></div>
+
+<div class="dodont">
+<div class="do"><h4>✅ Do</h4><ul>
+<li>Publish business <i>facts</i> ("OrderPlaced"), not commands ("ChargeCard")</li>
+<li>Give each consumer its own group so all get their own copy (fan-out)</li>
+<li>Version your event schema so new subscribers and old ones coexist (topic 14)</li>
+</ul></div>
+<div class="dont"><h4>❌ Don't</h4><ul>
+<li>Bake consumer knowledge into the producer — that re-couples them</li>
+<li>Assume delivery is instant or once — plan for delay and duplicates (topic 5)</li>
+</ul></div>
+</div>
+<div class="gotcha"><b>Gotcha:</b> fan-out makes it dangerously easy for hidden dependencies to accumulate — six services now silently rely on your event's shape, and a "small" field rename breaks consumers you didn't know existed. Because the producer is decoupled, nothing warns you. Treat published events as a <i>public API</i> with versioning and a schema registry (topic 14), not an internal struct you can refactor freely.</div>
+</div>
+</details>
+
+<details class="card" id="t4">
+<summary><span class="num">04</span><span class="ttl">Kafka fundamentals — topics, partitions, offsets</span><span class="star">★ core idea</span><span class="chev">▶</span></summary>
+<div class="body">
+<p class="scenario"><b>Scenario:</b> you put all order events on one Kafka topic and consumers can't keep up — or events for the same customer get processed out of order. Understanding partitions and keys is what makes Kafka scale <i>and</i> stay ordered where it matters (topic 7).</p>
+
+<div class="wwh">
+  <div class="what"><h5>What</h5><p>A <b>topic</b> is a named log, split into <b>partitions</b> (the unit of parallelism &amp; ordering). Each message has an <b>offset</b>; a <b>key</b> decides its partition. Consumer groups share partitions.</p></div>
+  <div class="why"><h5>Why</h5><p>Partitions give you throughput (parallel consumers) and <b>per-key ordering</b> (same key → same partition → in order). It's the core scaling knob.</p></div>
+  <div class="how"><h5>How</h5><p>Producers hash the key to a partition. Each partition is consumed by exactly one member of a group. Order is guaranteed <i>within</i> a partition, not across.</p></div>
+</div>
+
+<div class="ascii"><div class="lbl">Topic → partitions → offsets, keyed for order</div><pre>  topic "orders"  (key = customer_id → same customer, same partition)
+   P0: [o0 o1 o2 o3]      ← consumer A (group G)
+   P1: [o0 o1 o2]         ← consumer B (group G)
+   P2: [o0 o1 o2 o3 o4]   ← consumer C (group G)
+        ▲offsets
+  ordering: guaranteed WITHIN a partition, NOT across partitions
+  parallelism: max consumers in a group = number of partitions
+</pre></div>
+
+<div class="analogy"><span class="ic">🧠</span><div><b>Analogy 1 — checkout lanes at a store:</b> a topic is the store; partitions are the lanes. More lanes = more shoppers served at once (throughput). If you always send the same family to the same lane (key), their items stay in order. Across different lanes, order is anyone's guess.</div></div>
+<div class="analogy two"><span class="ic">📚</span><div><b>Analogy 2 — a series split across volumes:</b> a topic is the whole series; each partition is a numbered volume you read page by page (offsets). One reader per volume in a book club (consumer group). Pages within a volume are ordered; page 5 of volume 2 vs volume 1 has no defined order.</div></div>
+
+<div class="code"><div class="code-label">Key for ordering, scale with partitions</div><pre class="py"># producer: key by customer so their events stay ordered
+producer.send("orders", key=str(customer_id), value=event)
+#   same customer_id → same partition → strict order for that customer
+
+# consumer group: N consumers share N+ partitions
+consumer.subscribe(["orders"], group_id="billing")
+for msg in consumer:
+    handle(msg.value)
+    consumer.commit()        # advance offset ONLY after success (topic 5)
+# add partitions to scale; add consumers up to #partitions</pre></div>
+
+<div class="simple"><span class="ic">🧒</span><div><span class="tag">In plain words</span>Kafka is a giant notebook (topic) split into several columns (partitions) so many people can write and read at once. Each line has a line-number (offset). If you always put the same customer's events in the same column, they stay in order for that customer. Want to go faster? Add more columns. But things in <i>different</i> columns aren't guaranteed to be in order — so choose your column-key wisely.</div></div>
+
+<div class="dodont">
+<div class="do"><h4>✅ Do</h4><ul>
+<li>Pick a partition key that groups things needing order (e.g. per user/account) — topic 7</li>
+<li>Provision enough partitions up front — they set your max parallelism</li>
+<li>Commit offsets only after successfully processing (at-least-once, topic 5)</li>
+</ul></div>
+<div class="dont"><h4>❌ Don't</h4><ul>
+<li>Expect global ordering across partitions — it doesn't exist</li>
+<li>Use one partition for everything — you've capped throughput at one consumer</li>
+</ul></div>
+</div>
+<div class="gotcha"><b>Gotcha:</b> partition count is easy to increase and painful to reason about after — adding partitions <i>changes the key→partition mapping</i>, so a key that used to land on P2 may now land on P5, scattering a key's history across partitions and breaking per-key ordering for in-flight data. Plan partitions generously at design time rather than reshuffling a live topic (topics 2, 7).</div>
+</div>
+</details>
+
+<details class="card" id="t5">
+<summary><span class="num">05</span><span class="ttl">Delivery semantics — at-least / at-most / exactly-once</span><span class="star">★ core idea</span><span class="chev">▶</span></summary>
+<div class="body">
+<p class="scenario"><b>Scenario:</b> your consumer processes an event, then crashes <i>before</i> committing its offset. On restart it sees the event again and processes it twice. Whether that's a disaster or a non-event depends entirely on your delivery semantics — and your idempotency (topic 6).</p>
+
+<div class="wwh">
+  <div class="what"><h5>What</h5><p>Three guarantees: <b>at-most-once</b> (may lose, never duplicate), <b>at-least-once</b> (never lose, may duplicate), <b>exactly-once</b> (neither — hard and narrow).</p></div>
+  <div class="why"><h5>Why</h5><p>Most real systems are <b>at-least-once</b>, so duplicates <i>will</i> happen. Whether that's safe depends on whether your consumer is idempotent (topic 6).</p></div>
+  <div class="how"><h5>How</h5><p>At-least-once = ack <i>after</i> processing. At-most-once = ack before. "Exactly-once" = at-least-once delivery + idempotent processing (effectively-once).</p></div>
+</div>
+
+<div class="ascii"><div class="lbl">Where you ack decides the guarantee</div><pre>  AT-MOST-ONCE:  receive → ACK → process
+     crash after ack, before process → event LOST (never duplicated)
+
+  AT-LEAST-ONCE: receive → process → ACK
+     crash after process, before ack → reprocessed → DUPLICATE
+
+  EXACTLY-ONCE (effective): at-least-once + idempotent consumer (topic 6)
+     duplicate arrives → dedupe by key → no visible double effect ✓
+</pre></div>
+
+<div class="analogy"><span class="ic">🧠</span><div><b>Analogy 1 — signing for a package:</b> sign <i>before</i> opening (at-most-once) and if it's empty you've lost it with no recourse. Sign <i>after</i> confirming contents (at-least-once) and a re-delivery might get signed twice. "Exactly-once" is signing after <i>and</i> a ledger that refuses a second signature for the same tracking number.</div></div>
+<div class="analogy two"><span class="ic">💊</span><div><b>Analogy 2 — a medication checklist:</b> cross off the dose <i>before</i> giving it (at-most-once) and a crash means a missed dose. Cross off <i>after</i> (at-least-once) and a mix-up risks a double dose — unless the chart says "already given at 2pm" (idempotency) so the repeat is safely ignored.</div></div>
+
+<div class="code"><div class="code-label">At-least-once done right = ack after + idempotent</div><pre class="py">for event in consumer:
+    if seen.contains(event.id):        # idempotent guard (topic 6)
+        consumer.commit(); continue    # duplicate → skip, then ack
+    process(event)                     # do the work
+    seen.add(event.id)
+    consumer.commit()                  # ACK only AFTER success
+# crash before commit → event redelivered → guard makes it a no-op
+# this is "effectively-once" — the practical form of exactly-once</pre></div>
+
+<div class="simple"><span class="ic">🧒</span><div><span class="tag">In plain words</span>When a computer passes a message to another, three things can happen: it might get <b>lost</b>, it might arrive <b>twice</b>, or (ideally) exactly once. In real life you usually pick "never lose it, but it might arrive twice," and then you make your code <b>shrug at repeats</b> (remember what you've already done). True "exactly once" is very hard, so smart teams fake it: allow duplicates, but ignore them.</div></div>
+
+<div class="dodont">
+<div class="do"><h4>✅ Do</h4><ul>
+<li>Assume at-least-once and make consumers idempotent (topic 6)</li>
+<li>Commit/ack the offset only <i>after</i> the work is safely done</li>
+<li>Treat "exactly-once" as "at-least-once + dedupe," not magic</li>
+</ul></div>
+<div class="dont"><h4>❌ Don't</h4><ul>
+<li>Ack before processing unless losing messages is genuinely acceptable</li>
+<li>Trust vendor "exactly-once" to cover side effects outside the broker (emails, charges)</li>
+</ul></div>
+</div>
+<div class="gotcha"><b>Gotcha:</b> "exactly-once" is a marketing-friendly phrase that's only truly achievable <i>within</i> a closed system (broker→broker with transactions). The moment your consumer touches the outside world — sends an email, charges a card, calls an API — you're back to at-least-once for that side effect, and only <i>idempotency</i> saves you (topic 6). Never let "the broker guarantees exactly-once" lull you into non-idempotent side effects.</div>
+</div>
+</details>
+
+<details class="card" id="t6">
+<summary><span class="num">06</span><span class="ttl">Idempotent consumers — surviving duplicates</span><span class="star">★ core idea</span><span class="chev">▶</span></summary>
+<div class="body">
+<p class="scenario"><b>Scenario:</b> your system is at-least-once (topic 5), so the same "OrderPaid" event <i>will</i> arrive twice someday — a redelivery, a rebalance, a replay. If your consumer isn't idempotent, that means a double shipment or a doubled loyalty-points grant. Idempotent consumers are how you survive the duplicates you can't avoid.</p>
+
+<div class="wwh">
+  <div class="what"><h5>What</h5><p>A consumer designed so that processing the same event twice has the same effect as once — via a <b>dedupe store</b> (record processed event ids) or naturally-idempotent operations.</p></div>
+  <div class="why"><h5>Why</h5><p>At-least-once delivery guarantees duplicates. Idempotency is the <i>only</i> thing that turns "processed twice" from a data-corruption bug into a harmless no-op.</p></div>
+  <div class="how"><h5>How</h5><p>Give each event a stable id; before applying, check-and-record it atomically (a unique constraint or transactional dedupe table). Prefer "set to X" over "add X".</p></div>
+</div>
+
+<div class="ascii"><div class="lbl">Dedupe by event id, atomically</div><pre>  event(id=E1) ─►┌ consumer ┐
+                 │ INSERT id=E1 into processed (unique) ── ok → apply ✓
+                 └───────────┘   store id + result in ONE transaction
+  duplicate event(id=E1) ─►┌ consumer ┐
+                 │ INSERT id=E1 → UNIQUE VIOLATION → skip (no-op) ✓
+                 └───────────┘   same effect as processing once
+  ⚠ check-then-write in TWO steps → two duplicates race through → use a
+    unique constraint or an atomic upsert to close the gap
+</pre></div>
+
+<div class="analogy"><span class="ic">🧠</span><div><b>Analogy 1 — a bouncer's guest list with a highlighter:</b> each guest's name is crossed off as they enter. If the same name shows up again, the bouncer sees it's already crossed off and doesn't admit a second copy. The list + highlighter is your dedupe store; the crossing-off must be one atomic motion, or two identical guests slip in at once.</div></div>
+<div class="analogy two"><span class="ic">🧾</span><div><b>Analogy 2 — stamping "PAID" on an invoice:</b> once an invoice is stamped PAID, a second payment attempt sees the stamp and stops. The stamp is the record that this exact thing already happened. Without it, an accountant processing the same invoice twice pays the vendor twice.</div></div>
+
+<div class="code"><div class="code-label">Atomic dedupe on the event id</div><pre class="py">def handle(event):
+    with db.transaction():                       # ONE atomic unit
+        try:
+            db.insert("processed_events", id=event.id)   # UNIQUE column
+        except UniqueViolation:
+            return                               # duplicate → no-op ✓
+        apply_effect(event)                      # do the work in the SAME tx
+# the unique constraint + single transaction close the race two
+# concurrent duplicates would otherwise slip through (topic 5)
+# even better: naturally idempotent ops — "set status=shipped" not "ship again"</pre></div>
+
+<div class="simple"><span class="ic">🧒</span><div><span class="tag">In plain words</span>Because messages sometimes arrive twice, your code has to be okay with seeing the same event again. The trick: keep a <b>list of events you've already handled</b> (by their unique id). Before doing anything, check the list — if it's already there, just skip it. The important detail: checking and recording must happen <i>together</i> in one step, or two copies arriving at the same instant could both sneak past. Do this and duplicates become totally harmless.</div></div>
+
+<div class="dodont">
+<div class="do"><h4>✅ Do</h4><ul>
+<li>Give every event a stable id and dedupe on it in a single atomic step</li>
+<li>Store the dedupe record and the effect in the <i>same</i> transaction</li>
+<li>Prefer naturally-idempotent effects ("set balance", "mark shipped")</li>
+</ul></div>
+<div class="dont"><h4>❌ Don't</h4><ul>
+<li>Check "have I seen this?" and write in two separate steps — duplicates race through</li>
+<li>Assume duplicates are rare enough to ignore — at-least-once guarantees them</li>
+</ul></div>
+</div>
+<div class="gotcha"><b>Gotcha:</b> the subtle failure is a <i>non-atomic</i> dedupe — "check if seen, then process, then mark seen" as three separate steps. Two copies of the same event arriving concurrently both pass the check before either marks it, and both process. The fix is a database <b>unique constraint</b> (or an atomic upsert) so the second insert fails hard, done in the <i>same transaction</i> as the effect. Idempotency you didn't make atomic is idempotency you don't actually have (topics 5, 12).</div>
+</div>
+</details>
+
+<details class="card" id="t7">
+<summary><span class="num">07</span><span class="ttl">Ordering &amp; partitioning — when order matters</span><span class="chev">▶</span></summary>
+<div class="body">
+<p class="scenario"><b>Scenario:</b> "AccountOpened" and "AccountClosed" for the same account get processed out of order, and now you're trying to close an account that doesn't exist yet. Ordering in event systems is <i>only</i> guaranteed within a partition — so you must partition by the thing that needs order.</p>
+
+<div class="wwh">
+  <div class="what"><h5>What</h5><p>Event streams guarantee order <b>within a partition</b>, not across the whole topic. The <b>partition key</b> decides which events are ordered together.</p></div>
+  <div class="why"><h5>Why</h5><p>Many domains need per-entity order (a bank account, a user's actions) but not global order. Partitioning by that entity gives you the order you need <i>and</i> parallelism.</p></div>
+  <div class="how"><h5>How</h5><p>Key by the entity whose events must stay ordered (account_id). All its events land on one partition, processed in order; different entities parallelize across partitions.</p></div>
+</div>
+
+<div class="ascii"><div class="lbl">Order per key, parallel across keys</div><pre>  key = account_id  → same account, same partition, IN ORDER
+    P0: [acct-7: Opened, Deposit, Closed]   ✓ correct order for acct-7
+    P1: [acct-9: Opened, Withdraw]          ✓ parallel, independent
+
+  ✗ wrong key (e.g. random): acct-7 events scatter across partitions →
+     Closed may be processed before Opened → corruption
+  global ordering across ALL partitions does NOT exist (topic 4)
+</pre></div>
+
+<div class="analogy"><span class="ic">🧠</span><div><b>Analogy 1 — sorting mail by household:</b> a letter carrier keeps each household's mail in delivery order, but doesn't care that house #7's mail is ordered relative to house #9's. Partitioning by household (key) gives each home correctly-ordered mail while many carriers work different streets in parallel.</div></div>
+<div class="analogy two"><span class="ic">🎳</span><div><b>Analogy 2 — bowling lanes:</b> pins in <i>one</i> lane fall in a sequence that makes sense for that game; comparing the timing to the next lane is meaningless. Each account is a lane — its events are ordered; across lanes, order isn't defined and doesn't need to be.</div></div>
+
+<div class="code"><div class="code-label">Key by what must stay ordered</div><pre class="py"># ✓ per-account ordering: key by account_id
+producer.send("account-events", key=str(account_id), value=event)
+#   Opened → Deposit → Closed for acct-7 ALL land on one partition, in order
+
+# ✗ keying by something else (or none) scatters an account's events →
+#   Closed can be handled before Opened → invalid state
+# rule: partition key = the entity whose event order you must preserve
+# need strict GLOBAL order? one partition — but that caps throughput (topic 4)</pre></div>
+
+<div class="simple"><span class="ic">🧒</span><div><span class="tag">In plain words</span>Events for the same thing sometimes need to happen in the right order — you can't "close" an account before it's "opened." But event systems only keep order <i>within one lane</i> (partition), not across all lanes. So the trick is: put everything for the same account into the <b>same lane</b> by using the account's id as the sorting key. Then that account's events stay in order, while different accounts run in parallel lanes for speed.</div></div>
+
+<div class="dodont">
+<div class="do"><h4>✅ Do</h4><ul>
+<li>Key by the entity whose events must stay ordered (account, user, order)</li>
+<li>Accept that only per-key order is guaranteed — design around it</li>
+<li>Handle out-of-order gracefully where you can (e.g. tolerate late events)</li>
+</ul></div>
+<div class="dont"><h4>❌ Don't</h4><ul>
+<li>Assume global ordering across a topic — it doesn't exist (topic 4)</li>
+<li>Force strict global order with a single partition unless throughput allows it</li>
+</ul></div>
+</div>
+<div class="gotcha"><b>Gotcha:</b> the trap is needing order but keying wrong (or not at all), which <i>scatters</i> an entity's events across partitions where they're processed concurrently and out of sequence — producing impossible states like a "Closed" before its "Opened." And strict <i>global</i> ordering has a hidden cost: it requires a single partition, which caps your throughput at one consumer. Most systems need per-<i>entity</i> order, not global — choose the partition key to match exactly what must stay in sequence (topics 4, 6).</div>
+</div>
+</details>
+
+<details class="card" id="t8">
+<summary><span class="num">08</span><span class="ttl">Choreography vs orchestration</span><span class="chev">▶</span></summary>
+<div class="body">
+<p class="scenario"><b>Scenario:</b> an order needs payment, inventory, shipping, and email — in a sensible order, with rollback on failure. Do the services react to each other's events (choreography) or does one coordinator drive them (orchestration)? Both are valid; the choice shapes everything.</p>
+
+<div class="wwh">
+  <div class="what"><h5>What</h5><p><b>Choreography</b>: services react to events with no central brain — emergent flow. <b>Orchestration</b>: a coordinator explicitly calls each step and tracks the workflow.</p></div>
+  <div class="why"><h5>Why</h5><p>Choreography = loose coupling, easy to extend, but flow is <i>implicit</i> and hard to see. Orchestration = clear, debuggable flow, but the orchestrator is a coupling point.</p></div>
+  <div class="how"><h5>How</h5><p>Choreography: each service subscribes to events and emits new ones. Orchestration: a workflow engine (or saga orchestrator, topic 11) issues commands step by step.</p></div>
+</div>
+
+<div class="ascii"><div class="lbl">Emergent flow vs a conductor</div><pre>  CHOREOGRAPHY (no brain, services react):
+   OrderPlaced→[payment]→Paid→[inventory]→Reserved→[shipping]→Shipped
+   flow lives in the wiring; no one place shows the whole story
+
+  ORCHESTRATION (a conductor):
+        ┌────── ORCHESTRATOR ──────┐
+        ▼         ▼        ▼        ▼
+     payment  inventory shipping  email
+   the orchestrator KNOWS the whole flow; easy to see &amp; change order
+</pre></div>
+
+<div class="analogy"><span class="ic">🧠</span><div><b>Analogy 1 — a dance troupe vs an orchestra:</b> choreography is dancers who each know their cue and respond to the dancer before them — beautiful and flexible, but no one "runs" it. Orchestration is an orchestra with a conductor who cues every section — the flow is explicit and easy to redirect, but everything depends on the conductor.</div></div>
+<div class="analogy two"><span class="ic">🍽️</span><div><b>Analogy 2 — a buffet vs a set menu with a maître d':</b> choreography is a buffet — each station just does its thing as guests flow past. Orchestration is a maître d' walking you course by course. The buffet scales and adds stations easily; the maître d' gives you a clear, controllable experience.</div></div>
+
+<div class="code"><div class="code-label">Two styles, same order flow</div><pre class="py"># CHOREOGRAPHY — each service reacts &amp; emits the next event
+on("OrderPlaced",  lambda e: (charge(e), emit("Paid", e)))
+on("Paid",         lambda e: (reserve(e), emit("Reserved", e)))
+on("Reserved",     lambda e: (ship(e), emit("Shipped", e)))
+# no central view; flow = the sum of these subscriptions
+
+# ORCHESTRATION — a coordinator drives &amp; sees the whole flow
+def fulfill(order):
+    charge(order); reserve(order); ship(order); notify(order)
+    # one place to read, reorder, add compensation (topic 11)</pre></div>
+
+<div class="simple"><span class="ic">🧒</span><div><span class="tag">In plain words</span>Two ways to run a multi-step job across services. <b>Choreography</b>: no boss — each service watches for events and does its part, like dancers taking cues from each other. <b>Orchestration</b>: one boss (a coordinator) tells each service when to go, like a conductor. Dancers are flexible but the routine is hard to follow; the conductor makes the plan obvious but everything leans on them.</div></div>
+
+<div class="dodont">
+<div class="do"><h4>✅ Do</h4><ul>
+<li>Prefer choreography for loose, evolving flows with few steps</li>
+<li>Prefer orchestration for complex flows needing visibility &amp; compensation (topic 11)</li>
+<li>Document the event flow — choreography's biggest weakness is discoverability</li>
+</ul></div>
+<div class="dont"><h4>❌ Don't</h4><ul>
+<li>Build a sprawling choreography no one can trace end to end</li>
+<li>Let the orchestrator become a god-service that everything depends on</li>
+</ul></div>
+</div>
+<div class="gotcha"><b>Gotcha:</b> pure choreography scales the <i>architecture</i> but not your <i>understanding</i> — with a dozen services reacting to each other's events, no single place describes what a business flow actually does, and diagnosing "why didn't the order ship?" means archaeology across logs and traces. Most mature teams end up orchestrating the critical, compensating flows (sagas, topic 11) and choreographing the peripheral reactions.</div>
+</div>
+</details>
+
+<div class="part pat">Part II · <span>Event-Driven Patterns</span></div>
+
+<details class="card pat-card" id="t9">
+<summary><span class="num">09</span><span class="ttl">Event sourcing — store the changes, not the state</span><span class="star">★ core idea</span><span class="chev">▶</span></summary>
+<div class="body">
+<p class="scenario"><b>Scenario:</b> a customer disputes their balance and asks "how did it get to $40?" Your database only stores the current $40 — the history is gone. With <b>event sourcing</b>, you store every change as an immutable event, so the state is always reconstructable and auditable.</p>
+
+<div class="wwh">
+  <div class="what"><h5>What</h5><p>Persist state as an append-only log of <b>events</b> (facts that happened). Current state is derived by replaying events, not stored directly.</p></div>
+  <div class="why"><h5>Why</h5><p>You get a perfect <b>audit log</b>, time-travel/debugging, the ability to build new read models from history (topic 10), and natural fit with event-driven systems.</p></div>
+  <div class="how"><h5>How</h5><p>Append events (Deposited, Withdrew). To get state, fold the events. Snapshot periodically so you don't replay from the beginning of time.</p></div>
+</div>
+
+<div class="ascii"><div class="lbl">State = a fold over the event log</div><pre>  traditional: row  balance = 40   (history lost on each UPDATE)
+
+  event-sourced log (immutable, append-only):
+    Deposited 100 → Withdrew 30 → Withdrew 30 → balance = 40
+    replay ────────────────────────────────►  derive any time
+  benefits: audit trail, "what was the balance on Tuesday?",
+            rebuild new views from the SAME history (topic 10)
+  snapshots: cache balance@event#1000 so replay isn't from zero
+</pre></div>
+
+<div class="analogy"><span class="ic">🧠</span><div><b>Analogy 1 — a bank statement vs a sticky note:</b> a sticky note shows only today's balance (traditional). A bank statement lists every deposit and withdrawal (event log) — you can always re-add them to get the balance <i>and</i> answer "what happened on the 3rd?" Events are the statement; state is just the running total.</div></div>
+<div class="analogy two"><span class="ic">♟️</span><div><b>Analogy 2 — chess moves vs a board photo:</b> a photo shows the current board (state). The move list (1. e4 e5 2. Nf3…) is event sourcing — replay the moves to reach any position, review how you got there, or branch a new analysis. The moves are the truth; the board is derived.</div></div>
+
+<div class="code"><div class="code-label">Append events, fold to state</div><pre class="py">events = [("Deposited", 100), ("Withdrew", 30), ("Withdrew", 30)]
+
+def apply(state, event):
+    kind, amt = event
+    return state + amt if kind == "Deposited" else state - amt
+
+balance = 0
+for e in events:                # fold the log → current state
+    balance = apply(balance, e)
+print(balance)                  # 40 — and the FULL history is preserved
+# snapshot every N events so you fold from the snapshot, not from 0</pre></div>
+
+<div class="simple"><span class="ic">🧒</span><div><span class="tag">In plain words</span>Most apps just save "the balance is $40" and forget how it got there. Event sourcing instead writes down <b>every change</b> — "+$100, −$30, −$30" — like a diary that's never erased. To know the balance, you add it all up. Now you can always answer "how did we get here?", replay the past, and even build brand-new reports from the old history. The diary is the source of truth.</div></div>
+
+<div class="dodont">
+<div class="do"><h4>✅ Do</h4><ul>
+<li>Use it where audit, history, and "why" genuinely matter (finance, ledgers)</li>
+<li>Make events immutable, past-tense facts; snapshot to bound replay cost</li>
+<li>Version event schemas — you'll be replaying old events for years (topic 14)</li>
+</ul></div>
+<div class="dont"><h4>❌ Don't</h4><ul>
+<li>Event-source everything — it's heavy machinery for simple CRUD</li>
+<li>Ever mutate or delete a stored event — that destroys the guarantee</li>
+</ul></div>
+</div>
+<div class="gotcha"><b>Gotcha:</b> event sourcing makes <i>schema evolution</i> permanent homework — because you replay events written years ago, you can never just "change the shape," you must handle every historical version forever (upcasting, topic 14). And a bug that wrote bad events can't be fixed with an UPDATE; you correct it with <i>compensating events</i>. The audit-log superpower and this rigidity are the same coin (topic 10).</div>
+</div>
+</details>
+
+<details class="card pat-card" id="t10">
+<summary><span class="num">10</span><span class="ttl">CQRS — separate the write and read models</span><span class="chev">▶</span></summary>
+<div class="body">
+<p class="scenario"><b>Scenario:</b> your write path needs strict validation and normalized tables, but your dashboard needs fast, denormalized reads across those same tables — and the two fight. <b>CQRS</b> splits them: one model for commands (writes), a separate model for queries (reads).</p>
+
+<div class="wwh">
+  <div class="what"><h5>What</h5><p><b>Command Query Responsibility Segregation</b>: use different models (often different stores) for writing vs reading, kept in sync via events.</p></div>
+  <div class="why"><h5>Why</h5><p>Reads and writes have opposite needs (consistency/normalization vs speed/denormalization). Splitting lets each scale and optimize independently.</p></div>
+  <div class="how"><h5>How</h5><p>Commands update the write model and emit events; <b>projections</b> consume events to build read-optimized views (search index, cache, denormalized tables).</p></div>
+</div>
+
+<div class="ascii"><div class="lbl">Write side and read side, joined by events</div><pre>   COMMANDS ─► [ write model ] ──events──► [ projections ] ◄─ QUERIES
+   (validate,   normalized,                denormalized read views:
+    one truth)  consistent                 • search index
+                                            • dashboard table
+                                            • cache
+   write side optimized for correctness; read side for speed
+   (reads are eventually consistent with writes)
+</pre></div>
+
+<div class="analogy"><span class="ic">🧠</span><div><b>Analogy 1 — a kitchen vs a menu:</b> the kitchen (write model) is organized for <i>cooking correctly</i> — raw ingredients, strict recipes. The menu (read model) is organized for <i>choosing fast</i> — pretty descriptions, prices, categories. You don't make diners read recipe cards; you don't cook from the menu. Same food, two representations.</div></div>
+<div class="analogy two"><span class="ic">🏭</span><div><b>Analogy 2 — a factory vs a showroom:</b> the factory (writes) is built for assembly and quality control; the showroom (reads) is built for browsing and quick answers. Products flow from factory to showroom (events → projections). Optimizing one for the other's job would ruin both.</div></div>
+
+<div class="code"><div class="code-label">Commands write; projections build read views</div><pre class="py"># WRITE side: validate + persist + emit
+def place_order(cmd):
+    validate(cmd)
+    write_db.insert(cmd)                 # normalized source of truth
+    emit("OrderPlaced", cmd)
+
+# READ side: a projection builds a fast, denormalized view
+on("OrderPlaced", lambda e:
+    read_db.upsert("orders_dashboard",   # pre-joined, indexed for queries
+        {"id": e.id, "customer": e.name, "total": e.total, "day": e.day}))
+
+dashboard = read_db.query("orders_dashboard where day = today")  # fast</pre></div>
+
+<div class="simple"><span class="ic">🧒</span><div><span class="tag">In plain words</span>Saving data and showing data want opposite things: saving wants to be careful and tidy, showing wants to be fast and pre-arranged. CQRS says: <b>use one setup for writing and a different, read-friendly setup for showing</b>, and copy changes from one to the other. Like a kitchen (organized to cook) and a menu (organized to pick) — same food, two layouts, each great at its job.</div></div>
+
+<div class="dodont">
+<div class="do"><h4>✅ Do</h4><ul>
+<li>Reach for CQRS when read and write workloads truly diverge or need separate scaling</li>
+<li>Build read models as disposable projections you can rebuild from events (topic 9)</li>
+<li>Accept and communicate that read views are eventually consistent</li>
+</ul></div>
+<div class="dont"><h4>❌ Don't</h4><ul>
+<li>Apply CQRS to simple CRUD — it's overhead you don't need</li>
+<li>Expect a read view to be instantly consistent with the write — it lags</li>
+</ul></div>
+</div>
+<div class="gotcha"><b>Gotcha:</b> CQRS bakes eventual consistency into your UX — the user submits a command, the write succeeds, but the read model hasn't caught up, so their own change "isn't there" on refresh. This confuses users and support alike. You either add read-your-writes handling (see the Distributed Systems playbook) or set expectations ("processing…"). CQRS without a plan for that lag generates a steady stream of "it didn't save!" tickets.</div>
+</div>
+</details>
+
+<details class="card pat-card" id="t11">
+<summary><span class="num">11</span><span class="ttl">The Saga pattern — distributed transactions</span><span class="star">★ core idea</span><span class="chev">▶</span></summary>
+<div class="body">
+<p class="scenario"><b>Scenario:</b> placing an order must charge payment, reserve inventory, and book shipping — across three services with three databases. There's no distributed <code>COMMIT</code>. If shipping fails after payment succeeded, you must <i>undo</i> the charge. That's a saga.</p>
+
+<div class="wwh">
+  <div class="what"><h5>What</h5><p>A <b>saga</b> models a multi-service transaction as a sequence of local transactions, each with a <b>compensating action</b> that semantically undoes it if a later step fails.</p></div>
+  <div class="why"><h5>Why</h5><p>Two-phase commit across services is slow, brittle, and blocks. Sagas give you eventual atomicity without a global lock — the pragmatic way to span services.</p></div>
+  <div class="how"><h5>How</h5><p>Run steps forward; on failure, run compensations backward (refund, release, cancel). Orchestrated (a coordinator) or choreographed (events) — topic 8.</p></div>
+</div>
+
+<div class="ascii"><div class="lbl">Forward steps, compensate on failure</div><pre>  forward:  charge ──► reserve ──► ship
+              ✓          ✓          ✗ FAILS
+  compensate (run backward):
+            refund ◄── release ◄──┘
+  each step: a LOCAL transaction + a matching UNDO
+  net effect: eventual atomicity, no global lock (no 2PC)
+</pre></div>
+
+<div class="analogy"><span class="ic">🧠</span><div><b>Analogy 1 — booking a trip piece by piece:</b> you book a flight, then a hotel, then a car. If the car falls through, you don't have a magic "cancel everything" button — you individually cancel the hotel and flight (compensations). A saga is planning each booking <i>with</i> its cancellation in hand.</div></div>
+<div class="analogy two"><span class="ic">↩️</span><div><b>Analogy 2 — a shopping return policy:</b> a store can't "un-sell" atomically across departments, so each department has a returns process. If your combo deal falls apart, each item is returned through its own counter. Compensations are those per-department returns — not a rollback, but a deliberate undo.</div></div>
+
+<div class="code"><div class="code-label">Orchestrated saga with compensations</div><pre class="py">def place_order(order):
+    done = []
+    try:
+        charge(order);   done.append(refund)      # step + its undo
+        reserve(order);  done.append(release)
+        ship(order);     done.append(cancel_ship)
+    except Exception:
+        for undo in reversed(done):    # compensate in reverse order
+            undo(order)                # refund, release — semantic undo
+        raise
+# compensations must be idempotent (topic 6) — they may be retried</pre></div>
+
+<div class="simple"><span class="ic">🧒</span><div><span class="tag">In plain words</span>When one action spans several services, there's no single "undo everything" button like a database has. So a saga does the steps one by one, and for each step it keeps a matching <b>"how to undo this"</b>. If a later step fails, it walks backward undoing what it already did — refund the payment, release the stock. It's not a true rollback; it's a planned series of undos. And each undo must be safe to retry.</div></div>
+
+<div class="dodont">
+<div class="do"><h4>✅ Do</h4><ul>
+<li>Define a compensating action for every step that has side effects</li>
+<li>Make both steps <i>and</i> compensations idempotent (they get retried, topic 6)</li>
+<li>Orchestrate complex sagas for visibility; persist saga state to resume after crashes</li>
+</ul></div>
+<div class="dont"><h4>❌ Don't</h4><ul>
+<li>Reach for two-phase commit across microservices — it blocks and doesn't scale (see the Distributed Systems playbook)</li>
+<li>Assume compensation fully "undoes" — a sent email or shipped box can't be unsent</li>
+</ul></div>
+</div>
+<div class="gotcha"><b>Gotcha:</b> sagas give you eventual atomicity but <i>not isolation</i> — midway through, the world sees a half-done state (money charged, order not yet placed), so another transaction can act on that intermediate reality. And some steps can't truly be compensated (you can't un-send an email or un-ship a package). You design around this with semantic locks, "pending" states, and compensations that mitigate rather than reverse (topics 8, 10).</div>
+</div>
+</details>
+
+<details class="card pat-card" id="t12">
+<summary><span class="num">12</span><span class="ttl">The outbox pattern — atomic DB + event</span><span class="star">★ core idea</span><span class="chev">▶</span></summary>
+<div class="body">
+<p class="scenario"><b>Scenario:</b> you save an order to the DB, then publish "OrderPlaced" to Kafka. The DB commit succeeds — then the broker publish fails. Now your data and your events disagree forever. The <b>outbox pattern</b> makes "save + publish" atomic.</p>
+
+<div class="wwh">
+  <div class="what"><h5>What</h5><p>Write the event into an <b>outbox table</b> in the <i>same DB transaction</i> as your business data. A separate relay reads the outbox and publishes to the broker.</p></div>
+  <div class="why"><h5>Why</h5><p>It solves the <b>dual-write problem</b>: you can't atomically write to a DB and a broker, so instead you make one atomic DB write and publish from that.</p></div>
+  <div class="how"><h5>How</h5><p>One transaction inserts the order <i>and</i> an outbox row. A relay (poller or CDC like Debezium) reads unpublished rows, sends them, marks them sent.</p></div>
+</div>
+
+<div class="ascii"><div class="lbl">One atomic commit, then relay publishes</div><pre>  ┌── single DB transaction ──┐
+  │ INSERT order              │  ← business data + event together:
+  │ INSERT outbox(OrderPlaced)│    both commit or neither
+  └───────────────────────────┘
+        │ committed
+        ▼
+   relay/CDC polls outbox ──► broker (Kafka)  ──► consumers
+        marks row "published" (at-least-once → consumers dedupe, topic 6)
+</pre></div>
+
+<div class="analogy"><span class="ic">🧠</span><div><b>Analogy 1 — writing a letter and a copy in your own ledger:</b> instead of trusting you'll remember to mail it, you record "letter to mail" in your ledger <i>as you write the letter</i> (one act). Later a helper checks the ledger and mails anything outstanding. Even if you're interrupted, the ledger guarantees it gets sent.</div></div>
+<div class="analogy two"><span class="ic">📮</span><div><b>Analogy 2 — an outbox tray on your desk:</b> you finish a document and drop it in the outbox tray in the same motion. The mail carrier empties the tray later. You never have to "remember to send" — the tray <i>is</i> the record, and it was filled atomically with finishing the work.</div></div>
+
+<div class="code"><div class="code-label">Save data and event in one transaction</div><pre class="py">with db.transaction():                 # atomic: both rows or neither
+    db.insert("orders", order)
+    db.insert("outbox", {"type": "OrderPlaced", "payload": order,
+                          "published": False})
+# ...separately, a relay drains the outbox reliably:
+def relay():
+    for row in db.select("outbox where not published order by id"):
+        broker.publish(row.type, row.payload)   # at-least-once
+        db.update("outbox", row.id, published=True)
+# DB and events can never disagree — the event is part of the commit</pre></div>
+
+<div class="simple"><span class="ic">🧒</span><div><span class="tag">In plain words</span>Saving your data and announcing "it happened!" are two separate steps, and if the second fails, your data and your announcements disagree forever. The fix: when you save the data, <b>also write the announcement into the same database, in the same save</b> — so they succeed together. Then a little helper reads those pending announcements and sends them out. Now the data and the news can never contradict each other.</div></div>
+
+<div class="dodont">
+<div class="do"><h4>✅ Do</h4><ul>
+<li>Write the event to an outbox in the same transaction as the data</li>
+<li>Use CDC (Debezium) or a poller to relay — and make consumers idempotent (topic 6)</li>
+<li>Include an event id so downstream dedupe works</li>
+</ul></div>
+<div class="dont"><h4>❌ Don't</h4><ul>
+<li>Publish to the broker and write the DB as two independent steps (dual-write bug)</li>
+<li>Delete outbox rows before confirming publication — mark then clean up later</li>
+</ul></div>
+</div>
+<div class="gotcha"><b>Gotcha:</b> the outbox guarantees the event is published <i>at least once</i>, not exactly once — the relay can crash after publishing but before marking the row sent, so it re-publishes on restart. This is fine and expected: it just means every consumer must be idempotent (topic 6). Teams who adopt the outbox for reliability but forget consumer-side dedupe simply move their duplicate bug one hop downstream (topics 5, 6).</div>
+</div>
+</details>
+
+<details class="card pat-card" id="t13">
+<summary><span class="num">13</span><span class="ttl">Dead letter queues &amp; poison messages</span><span class="chev">▶</span></summary>
+<div class="body">
+<p class="scenario"><b>Scenario:</b> one malformed message can't be processed. Your consumer retries it, fails, retries, fails — forever — blocking every message behind it. A <b>dead letter queue</b> sidelines the poison message so the rest of the stream keeps flowing.</p>
+
+<div class="wwh">
+  <div class="what"><h5>What</h5><p>A <b>poison message</b> is one that always fails processing. A <b>dead letter queue (DLQ)</b> is where you route messages after N failed attempts, instead of retrying forever.</p></div>
+  <div class="why"><h5>Why</h5><p>Without a DLQ, one bad message blocks the queue (head-of-line blocking) or spins infinite retries, burning resources and stalling everything behind it.</p></div>
+  <div class="how"><h5>How</h5><p>Track attempts; after a max, move the message to the DLQ with its error and metadata. Alert on DLQ depth; inspect, fix, and replay when resolved.</p></div>
+</div>
+
+<div class="ascii"><div class="lbl">Sideline the poison, keep the line moving</div><pre>  main queue: [ good  POISON  good  good ]
+                       │ fails ×3 (max retries)
+                       ▼
+                   ┌───────┐   alert! inspect the error,
+                   │  DLQ  │   fix code/data, then replay
+                   └───────┘
+  without DLQ: POISON retries forever → blocks the 2 good msgs behind it
+</pre></div>
+
+<div class="analogy"><span class="ic">🧠</span><div><b>Analogy 1 — a jammed letter in a sorting machine:</b> you don't stop the whole mail sort for one mangled envelope — you pull it into a "problem" bin for a human to handle, and the line keeps running. The DLQ is that problem bin; the poison message is the mangled envelope.</div></div>
+<div class="analogy two"><span class="ic">🛒</span><div><b>Analogy 2 — a checkout item that won't scan:</b> a good cashier sets the un-scannable item aside and keeps ringing up the rest, then deals with it after — rather than holding the whole line hostage. The DLQ is "set aside for later"; the queue keeps moving.</div></div>
+
+<div class="code"><div class="code-label">Bounded retries, then dead-letter</div><pre class="py">MAX = 5
+for msg in consumer:
+    try:
+        process(msg)
+        consumer.commit()
+    except Exception as e:
+        if msg.attempts >= MAX:
+            dlq.send(msg, error=str(e), attempts=msg.attempts)  # sideline
+            consumer.commit()          # unblock the queue
+        else:
+            requeue(msg, delay=backoff(msg.attempts))   # try later
+# alert when dlq depth &gt; 0; provide a tool to inspect &amp; replay after a fix</pre></div>
+
+<div class="simple"><span class="ic">🧒</span><div><span class="tag">In plain words</span>Sometimes one message is broken and will <i>never</i> succeed. If you keep retrying it, it clogs the pipe and nothing behind it moves. So after a few tries, you toss it into a special "problem" bin (the dead letter queue) and move on. Later, a human looks in the bin, figures out what's wrong, fixes it, and re-sends. The key: never let one bad message freeze the whole line.</div></div>
+
+<div class="dodont">
+<div class="do"><h4>✅ Do</h4><ul>
+<li>Cap retries and route failures to a DLQ with the error + context attached</li>
+<li>Alert on DLQ depth — a filling DLQ is a real incident signal</li>
+<li>Build a way to inspect and <i>replay</i> DLQ messages after a fix (topic 15)</li>
+</ul></div>
+<div class="dont"><h4>❌ Don't</h4><ul>
+<li>Retry a failing message infinitely — that's a self-inflicted outage</li>
+<li>Silently drop poison messages — you'll lose data and never know why</li>
+</ul></div>
+</div>
+<div class="gotcha"><b>Gotcha:</b> a DLQ is a symptom detector, not a fix — an unmonitored DLQ silently swallows business events (lost orders, dropped payments) while everything <i>looks</i> healthy, and you discover it weeks later via an angry customer. The DLQ only helps if its depth is alerted on and someone owns draining it. Distinguish <i>transient</i> failures (retry) from <i>poison</i> (dead-letter) too, or you'll DLQ things that just needed one more try (topics 5, 15).</div>
+</div>
+</details>
+
+<div class="part prod">Part III · <span>Production Streaming</span></div>
+
+<details class="card prod-card" id="t14">
+<summary><span class="num">14</span><span class="ttl">Schema evolution &amp; the registry</span><span class="star">★ core idea</span><span class="chev">▶</span></summary>
+<div class="body">
+<p class="scenario"><b>Scenario:</b> you rename a field in your "OrderPlaced" event, deploy, and three downstream consumers you forgot about crash — plus every replayed historical event is now the "wrong" shape. Events are a contract that outlives any single deploy, so schemas must evolve <i>compatibly</i>.</p>
+
+<div class="wwh">
+  <div class="what"><h5>What</h5><p>Managing how event schemas change over time so old and new producers/consumers coexist. A <b>schema registry</b> (Avro/Protobuf/JSON Schema) stores schemas and <b>enforces compatibility</b> rules on every change.</p></div>
+  <div class="why"><h5>Why</h5><p>Producers and consumers deploy independently and events are replayed for years (topic 9). A breaking schema change silently shatters consumers you can't see (topic 3).</p></div>
+  <div class="how"><h5>How</h5><p>Only make <b>backward/forward-compatible</b> changes: add optional fields with defaults, never rename or remove required ones. The registry rejects incompatible changes at publish time.</p></div>
+</div>
+
+<div class="ascii"><div class="lbl">Compatible changes only — the registry enforces it</div><pre>  ✓ SAFE (backward compatible):
+     add an OPTIONAL field with a default → old consumers ignore it
+  ✗ BREAKING:
+     rename/remove a field · change a type · make optional → required
+     → old consumers crash; replayed old events don't fit the new shape
+
+  SCHEMA REGISTRY: every publish validated against compat rules
+     producer → [ registry: is this change compatible? ] → allow / REJECT
+</pre></div>
+
+<div class="analogy"><span class="ic">🧠</span><div><b>Analogy 1 — updating a paper form everyone uses:</b> if you <i>add</i> an optional box, people who ignore it are fine (backward compatible). If you <i>rename</i> "Surname" to "Family name" or delete a required box, every office still using the old form breaks. The registry is the clerk who refuses to print a new form that would break existing offices.</div></div>
+<div class="analogy two"><span class="ic">🔌</span><div><b>Analogy 2 — a power socket standard:</b> you can add a new optional pin that old plugs ignore, but you can't move the live pin without frying every existing device. Events are sockets that many devices (consumers) depend on; the registry is the safety standard that blocks a dangerous redesign.</div></div>
+
+<div class="code"><div class="code-label">Add optional, never break</div><pre class="py"># ✓ backward-compatible evolution:
+#   v1: {order_id, total}
+#   v2: {order_id, total, coupon_code = null}   # NEW optional + default
+#   old consumers read v2 fine (ignore coupon_code); new read v1 (default)
+
+# ✗ breaking (registry should REJECT):
+#   rename total → amount · remove order_id · total: number → string
+
+# a schema registry validates every produced schema against a
+# compatibility mode (BACKWARD/FORWARD/FULL) and rejects unsafe changes.
+# for event sourcing, keep UPCASTERS: old_event → new_event shape (topic 9)</pre></div>
+
+<div class="simple"><span class="ic">🧒</span><div><span class="tag">In plain words</span>The events your services send are a <b>promise about their shape</b>, and lots of other services depend on that shape — including old events you might replay years later. So you can't just rename or delete fields; that breaks everyone still expecting the old shape. The safe move is to only <b>add new optional fields</b>. A "schema registry" is a gatekeeper that checks every change and blocks the ones that would break existing readers.</div></div>
+
+<div class="dodont">
+<div class="do"><h4>✅ Do</h4><ul>
+<li>Add optional fields with defaults; keep changes backward/forward compatible</li>
+<li>Use a schema registry to enforce compatibility on every publish</li>
+<li>Version events and keep upcasters for replayed history (topic 9)</li>
+</ul></div>
+<div class="dont"><h4>❌ Don't</h4><ul>
+<li>Rename or remove fields, or change types — you break unseen consumers (topic 3)</li>
+<li>Treat an event's shape like an internal struct you can refactor freely</li>
+</ul></div>
+</div>
+<div class="gotcha"><b>Gotcha:</b> the danger of events is that the coupling is <i>invisible</i> — unlike an API call, nothing in your code references the six consumers that depend on your event's shape, so a "harmless" rename passes review and detonates in production across services you forgot existed. Worse, event sourcing (topic 9) means you'll <i>replay</i> events written under old schemas forever, so every historical version must remain readable. A schema registry with a strict compatibility mode is the guardrail that makes independent deploys safe (topics 3, 9).</div>
+</div>
+</details>
+
+<details class="card prod-card" id="t15">
+<summary><span class="num">15</span><span class="ttl">Backpressure, consumer lag &amp; replay</span><span class="chev">▶</span></summary>
+<div class="body">
+<p class="scenario"><b>Scenario:</b> a spike floods your topic and consumers fall behind — "consumer lag" climbs into the millions, and events are processed minutes late. Separately, you deploy a bug that mis-processed a day of events. Both problems are handled by two superpowers of streams: <b>flow control</b> and <b>replay</b>.</p>
+
+<div class="wwh">
+  <div class="what"><h5>What</h5><p><b>Consumer lag</b> = how far behind a consumer is (unread offsets). <b>Backpressure</b> = controlling flow so consumers aren't overwhelmed. <b>Replay</b> = resetting a consumer's offset to reprocess past events.</p></div>
+  <div class="why"><h5>Why</h5><p>Lag is the key health metric of a streaming system. And replay — only possible because streams retain history (topic 2) — lets you rebuild state or fix bugs by reprocessing, a thing queues can't do.</p></div>
+  <div class="how"><h5>How</h5><p>Monitor and alert on lag; scale consumers up to the partition count; buffer with bounded memory. To replay, reset the consumer group's offset to an earlier point and let it reprocess (idempotently, topic 6).</p></div>
+</div>
+
+<div class="ascii"><div class="lbl">Lag to watch; replay to fix</div><pre>  log: e0 e1 e2 e3 e4 e5 e6 e7 e8 e9  (latest = e9)
+                     ▲ consumer at e4  → LAG = 5 (falling behind!)
+   fix: add consumers (up to #partitions) · bounded buffers (backpressure)
+
+  REPLAY (streams only — queues can't):
+     reset group offset e4 → e0  ⇒  reprocess e0..e9 from scratch
+     rebuild a read model, or reprocess after fixing a bug
+     (consumers MUST be idempotent so replay doesn't double-apply — topic 6)
+</pre></div>
+
+<div class="analogy"><span class="ic">🧠</span><div><b>Analogy 1 — a DVR of a live channel:</b> consumer lag is how far behind "live" you are while watching a recording. If you fall too far behind, you speed up or get help (more consumers). And because it's recorded, you can <i>rewind</i> and re-watch (replay) — something you can't do with a one-time phone call (a queue).</div></div>
+<div class="analogy two"><span class="ic">🎞️</span><div><b>Analogy 2 — re-running the tape after fixing the projector:</b> if the projector mangled last night's film, you don't lose the movie — you rewind the reel and play it again correctly. Stream replay is rewinding the reel: fix the consumer, reset to yesterday, reprocess. The reel (retained log) is what makes it possible.</div></div>
+
+<div class="code"><div class="code-label">Watch lag; replay to reprocess</div><pre class="py"># MONITOR lag = latest_offset - committed_offset per partition
+#   alert when lag grows; scale consumers up to the partition count (topic 4)
+
+# REPLAY — reset the consumer group to an earlier offset &amp; reprocess:
+$ kafka-consumer-groups --group billing --reset-offsets \
+    --to-datetime 2026-07-01T00:00:00 --topic orders --execute
+# now billing reprocesses everything since July 1 — to fix a bug or
+# rebuild a projection (topic 10). Consumers MUST be idempotent (topic 6)
+# so replaying doesn't double-charge or double-count.</pre></div>
+
+<div class="simple"><span class="ic">🧒</span><div><span class="tag">In plain words</span>Two streaming superpowers. First, <b>lag</b>: if events pour in faster than a service reads them, it falls behind — you watch that gap and add more workers or slow the inflow (backpressure) so nothing gets buried. Second, <b>replay</b>: because a stream <i>keeps</i> all its events (unlike a queue that throws them away), you can "rewind" and reprocess the past — perfect for fixing a bug or rebuilding a report. Just make sure reprocessing is safe to repeat, or you'll double things up.</div></div>
+
+<div class="dodont">
+<div class="do"><h4>✅ Do</h4><ul>
+<li>Monitor and alert on consumer lag — it's the key streaming health metric</li>
+<li>Scale consumers up to the partition count; use bounded buffers for backpressure</li>
+<li>Use replay to rebuild read models and reprocess after bug fixes — idempotently (topic 6)</li>
+</ul></div>
+<div class="dont"><h4>❌ Don't</h4><ul>
+<li>Ignore rising lag — it means events are processed late, silently</li>
+<li>Replay into non-idempotent consumers — you'll double every side effect (topic 6)</li>
+</ul></div>
+</div>
+<div class="gotcha"><b>Gotcha:</b> replay is a genuine superpower <i>and</i> a loaded gun — resetting an offset re-emits every past event through your consumer, so if that consumer isn't idempotent (topic 6) you re-charge cards, re-send emails, and double every count. Teams reach for replay to "fix" data and cause a second, bigger incident. Replay is only safe when consumers dedupe and side effects are idempotent — which is exactly why idempotency (topic 6) is the foundation everything else in this playbook rests on (topics 2, 6).</div>
+</div>
+</details>
+
+<details class="card prod-card" id="t16">
+<summary><span class="num">16</span><span class="ttl">Capstone — an event-driven order system</span><span class="star">★ capstone</span><span class="chev">▶</span></summary>
+<div class="body">
+<p class="scenario"><b>Scenario:</b> assemble everything into one real system — an order platform where checkout emits one event and billing, inventory, shipping, and analytics all react, correctly, even under duplicates and failure. This is the whole playbook working together.</p>
+
+<div class="wwh">
+  <div class="what"><h5>What</h5><p>A production event-driven flow wiring together the outbox, pub/sub fan-out, idempotent consumers, a saga, CQRS read models, DLQs, and schema-safe events — the concepts from all 15 topics.</p></div>
+  <div class="why"><h5>Why</h5><p>Any one pattern is easy alone. Production is making them <i>coexist</i>: decoupled, correct under duplicates and failure, observable, and evolvable.</p></div>
+  <div class="how"><h5>How</h5><p>Commit order + outbox atomically → relay to a keyed stream → many consumers fan out, each idempotent → a saga coordinates fulfillment with compensations → projections build read views → poison goes to a DLQ.</p></div>
+</div>
+
+<div class="ascii"><div class="lbl">The whole system, assembled</div><pre>  POST /order ─► [ order-svc ]
+     └ tx: INSERT order + INSERT outbox(OrderPlaced)   (atomic, topic 12)
+             │ relay/CDC
+             ▼
+        [ stream: orders ]  (keyed by customer, topics 4, 7)
+          ├─► SAGA: charge→reserve→ship, compensate on fail (topic 11)
+          │      every consumer idempotent (topic 6)
+          ├─► projection → orders_dashboard (CQRS read model, topic 10)
+          └─► analytics / search (fan-out, topic 3)
+  poison → DLQ (topic 13) · events schema-checked (topic 14) · replayable (15)
+</pre></div>
+
+<div class="analogy"><span class="ic">🧠</span><div><b>Analogy 1 — a well-run newsroom:</b> one reporter files a story (OrderPlaced) to the wire (stream); every desk — sports, finance, web — picks up the same wire and runs its own version (fan-out + projections). A mangled story goes to the editor's problem tray (DLQ), the style guide keeps formats compatible (schema registry), and the archive lets you re-run yesterday's edition (replay). One filing, many correct reactions.</div></div>
+<div class="analogy two"><span class="ic">🏗️</span><div><b>Analogy 2 — a finished building vs a pile of materials:</b> you learned bricks (idempotency), wiring (events), and plumbing (queues/streams) separately. The capstone is the standing, inspected, occupied building — every system connected and up to code. That integration <i>is</i> the engineering.</div></div>
+
+<div class="code"><div class="code-label">Order flow, everything wired together</div><pre class="py">def place_order(cmd):
+    with db.transaction():                          # atomic data + event (12)
+        order = db.insert("orders", cmd, status="placed")
+        db.insert("outbox", event("OrderPlaced", order, id=uuid()))
+    return order
+# relay drains outbox → stream(keyed by customer, 4/7) → consumers:
+on("OrderPlaced", saga_fulfill)      # charge→reserve→ship, compensate (11)
+on("OrderPlaced", project_dashboard) # CQRS read model (10)
+on("OrderPlaced", index_search)      # fan-out (3)
+# every consumer: idempotent by event id (6); poison → DLQ (13)
+# events schema-checked before publish (14); stream replayable to rebuild (15)</pre></div>
+
+<div class="simple"><span class="ic">🧒</span><div><span class="tag">In plain words</span>This is <b>everything put together</b>: an order comes in and is saved <i>with</i> its announcement in one safe step, the announcement fans out to the teams that charge, reserve, and ship it — each able to ignore duplicates and undo its part if a later step fails. Reads come from fast pre-built views, broken messages go to a "problem" bin instead of jamming the line, the event shapes are kept compatible, and you can re-run the past to fix mistakes. Each part was simple alone — the real skill is making them all work together, correctly, even when messages arrive twice or a step fails.</div></div>
+
+<div class="dodont">
+<div class="do"><h4>✅ Do</h4><ul>
+<li>Start simple; add the outbox, idempotency, and DLQs before you add more consumers</li>
+<li>Make the happy path correct <i>and</i> the duplicate/failure paths tested</li>
+<li>Treat events as a versioned contract and keep them replayable (topics 14, 15)</li>
+</ul></div>
+<div class="dont"><h4>❌ Don't</h4><ul>
+<li>Adopt every pattern here for a small system — most apps need very few of them</li>
+<li>Bolt on idempotency and schema safety "later" — later is after the duplicate-charge incident</li>
+</ul></div>
+</div>
+<div class="gotcha"><b>Gotcha:</b> the hardest part of an event-driven system isn't any single pattern — it's that they <i>interact</i>. The outbox creates duplicates that only idempotent consumers survive; CQRS creates read-model lag that confuses users mid-saga; replay re-fires every side effect through consumers that had better be idempotent. Idempotency (topic 6) is the keystone the whole arch depends on. Ship the smallest system that solves the real problem, then add each pattern deliberately — because every one you add is complexity you'll debug at 3am. And remember: for the machinery underneath (consistency, replication, resilience), reach for the companion Distributed Systems playbook. 🚀</div>
+</div>
+</details>
+
+<div class="part prod">Test yourself · <span>Round-based quiz</span></div>
+
+<div class="quiz" id="quiz">
+  <div class="qhead">
+    <p class="qintro">Answer 5 per round. Your progress and score are <b>saved in this browser</b> — come back anytime and continue where you left off.</p>
+    <span class="qmeta">Score: <b id="qscore">0</b> / <span id="qans">0</span> answered · <span id="qtotal">0</span> total</span>
+  </div>
+  <div class="progress"><i id="qbar"></i></div>
+  <div id="qwrap"></div>
+  <div class="btns">
+    <button class="check" id="qcheck" onclick="checkRound()">Check answers</button>
+    <button class="next" id="qnext" onclick="nextRound()" style="display:none">Next round →</button>
+    <span class="roundscore" id="qround"></span>
+    <button class="reset" onclick="resetQuiz()">Reset quiz</button>
+  </div>
+  <div class="done" id="qdone">
+    <h3 id="qdonetitle"></h3>
+    <p id="qdonebody"></p>
+  </div>
+</div>
+
+<footer>
+  <p>Event-Driven Architecture Pro Playbook · 16 topics · how services talk without falling over · built for Balasaheb</p>
+  <p style="margin-top:10px"><a href="https://baluraut.github.io/field-library/">↩ Back to the Field Library</a> · companion: the Distributed Systems playbook</p>
+</footer>
+
+</main>
+</div>
+
+<script>
+let lvl = 0;
+function fz(d){ lvl = d===0?0:Math.max(-2,Math.min(3,lvl+d)); document.documentElement.style.fontSize=(16+lvl*1.5)+"px"; }
+function toggleAll(open){ document.querySelectorAll("details.card").forEach(d=>d.open=open); }
+function openTarget(h){ if(!h)return; const el=document.querySelector(h.startsWith("#")?h:"#"+h); if(el&&el.tagName==="DETAILS")el.open=true; }
+document.querySelectorAll(".toc a").forEach(a=>a.addEventListener("click",()=>openTarget(a.getAttribute("href"))));
+openTarget(location.hash);
+const ESC = s => s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+function pyLine(line){
+  const c = line.indexOf("#");
+  let code = line, tail = "";
+  if(c !== -1){ tail = '<span class="com">'+ESC(line.slice(c))+"</span>"; code = line.slice(0,c); }
+  const re = /("""[\s\S]*?"""|'''[\s\S]*?'''|"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')|(@[A-Za-z_.]\w*)|(\b(?:def|class|return|if|elif|else|for|while|in|import|from|as|with|await|async|try|except|finally|raise|lambda|yield|pass|break|continue|not|and|or|is|None|True|False|self)\b)|(\b\d[\d_.]*\b)/g;
+  let out="", last=0, m;
+  while((m=re.exec(code))){
+    out += ESC(code.slice(last,m.index));
+    const cls = m[1]?"s":m[2]?"fn":m[3]?"k":"n";
+    out += '<span class="'+cls+'">'+ESC(m[0])+"</span>";
+    last = m.index+m[0].length;
+  }
+  out += ESC(code.slice(last));
+  out = out.replace(/(<span class="k">def<\/span>\s+)([A-Za-z_]\w*)/, '$1<span class="fn">$2</span>');
+  return out + tail;
+}
+function hlPy(src){ return src.split("\n").map(pyLine).join("\n"); }
+function shLine(line){
+  let m = line.match(/^(\s*\$\s+)(\S+)([\s\S]*)$/);
+  if(m){ return '<span class="prompt">'+ESC(m[1])+'</span><span class="cmd">'+ESC(m[2])+"</span>"+ESC(m[3]).replace(/(#.*$)/,'<span class="com">$&amp;</span>'); }
+  m = line.match(/^(\s*)(#.*)$/);
+  if(m) return ESC(m[1])+'<span class="com">'+ESC(m[2])+"</span>";
+  return ESC(line);
+}
+function hlSh(src){ return src.split("\n").map(shLine).join("\n"); }
+document.querySelectorAll("pre.py").forEach(p=>p.innerHTML=hlPy(p.textContent));
+document.querySelectorAll("pre.sh").forEach(p=>p.innerHTML=hlSh(p.textContent));
+
+const QS = [
+ {t:"Foundations",q:"The main benefit of async (event) communication over sync calls is…",o:["It's always faster","It decouples services so they fail and recover independently","It uses less memory","It removes the network"],a:1,w:"Sync chains couple availability/latency; one slow hop stalls all. Async relocates complexity (dupes, ordering) — not removes it (topic 1)."},
+ {t:"Foundations",q:"The key difference between a task queue and an event stream is…",o:["Streams are slower","A queue deletes on consume (one worker); a stream retains a log many consumers replay","Queues can't scale","There is none"],a:1,w:"Choose a stream when many services need the same events or you need replay (topic 15); a queue for one-time work (topic 2)."},
+ {t:"Foundations",q:"The advantage of pub/sub fan-out is that…",o:["Events arrive faster","You can add a new consumer without changing the producer","It guarantees exactly-once","It removes duplicates"],a:1,w:"Producers publish facts without knowing subscribers. But treat events as a versioned public API — hidden consumers depend on the shape (topics 3, 14)."},
+ {t:"Foundations",q:"In Kafka, ordering is guaranteed…",o:["Across the whole topic","Within a single partition (same key → same partition → in order)","Only with one consumer","Never"],a:1,w:"Partitions are the unit of parallelism AND ordering. Key by what needs order (topics 4, 7)."},
+ {t:"Foundations",q:"Most real messaging systems give you which delivery guarantee?",o:["Exactly-once always","At-least-once — so duplicates happen and consumers must be idempotent","At-most-once by default","Zero-or-once"],a:1,w:"Ack after processing = at-least-once. 'Exactly-once' for side effects = at-least-once + idempotency (topics 5, 6)."},
+ {t:"Foundations",q:"An idempotent consumer must dedupe…",o:["Whenever it remembers to","Atomically — check-and-record the event id in ONE step (a unique constraint)","Only for payments","Using timestamps"],a:1,w:"A non-atomic check-then-write lets two concurrent duplicates race through. Store the dedupe record in the same transaction as the effect (topic 6)."},
+ {t:"Foundations",q:"To keep 'Opened' before 'Closed' for the same account, you should…",o:["Use one big partition","Partition (key) by account_id so its events stay ordered on one partition","Sort by timestamp","Use more consumers"],a:1,w:"Order is only guaranteed within a partition. Wrong key scatters an entity's events and causes impossible states (topics 7, 4)."},
+ {t:"Foundations",q:"Choreography vs orchestration: orchestration means…",o:["Services react with no central brain","A coordinator explicitly drives each step of the workflow","There is no workflow","One service exists"],a:1,w:"Choreography = emergent, loosely coupled but hard to trace; orchestration = explicit, visible, but a coupling point (topic 8)."},
+ {t:"Patterns",q:"Event sourcing stores…",o:["Only current state","An append-only log of immutable events; state is derived by replaying them","Nothing permanently","Just backups"],a:1,w:"You get an audit trail and can rebuild new read models — but schema evolution becomes permanent homework (topics 9, 14)."},
+ {t:"Patterns",q:"CQRS separates…",o:["Frontend from backend","The write model from the read model, synced via events","Users from admins","Cache from DB"],a:1,w:"Writes optimize for correctness, reads for speed. The read side is eventually consistent — plan for that lag (topic 10)."},
+ {t:"Patterns",q:"A saga handles a multi-service transaction by…",o:["Two-phase commit","Running local steps forward, each with a compensating action to undo on failure","Locking all databases","Ignoring failures"],a:1,w:"Eventual atomicity without a global lock. Steps AND compensations must be idempotent; there's no isolation (topics 11, 6)."},
+ {t:"Patterns",q:"The outbox pattern solves…",o:["Slow queries","The dual-write problem — writing to a DB and a broker atomically","Cache invalidation","Login"],a:1,w:"Write the event to an outbox table in the same DB transaction; a relay publishes it. At-least-once → consumers dedupe (topics 12, 6)."},
+ {t:"Patterns",q:"A dead letter queue exists to…",o:["Speed up processing","Sideline poison messages after N failures so they don't block the queue","Store backups","Encrypt messages"],a:1,w:"One un-processable message shouldn't retry forever or block others. Alert on DLQ depth and provide replay (topics 13, 15)."},
+ {t:"Streaming",q:"To evolve an event schema safely you should…",o:["Rename fields freely","Only add OPTIONAL fields with defaults; a registry rejects breaking changes","Delete unused fields","Change types when needed"],a:1,w:"Consumers deploy independently and old events are replayed forever. Breaking changes shatter unseen consumers (topics 14, 3)."},
+ {t:"Streaming",q:"Stream replay (resetting a consumer's offset) is safe ONLY if…",o:["The topic is small","Consumers are idempotent — else it re-fires every side effect (double charges)","You have backups","It's off-hours"],a:1,w:"Replay re-emits every past event. Watch consumer LAG as the key health metric; idempotency (topic 6) makes replay safe (topic 15)."},
+ {t:"Streaming",q:"The keystone that the whole event-driven arch depends on is…",o:["Bigger brokers","Idempotency — the outbox, at-least-once, and replay all produce duplicates","More partitions","Faster networks"],a:1,w:"Patterns interact: outbox → dupes, CQRS → lag, replay → re-fires. Ship the simplest thing; add patterns deliberately (topic 16)."},
+];
+document.getElementById("qtotal").textContent = QS.length;
+const STORE_KEY = "eventdriven_quiz_v1";
+let answers = {};
+try { answers = JSON.parse(localStorage.getItem(STORE_KEY)) || {}; } catch(e){ answers = {}; }
+function saveAnswers(){ try { localStorage.setItem(STORE_KEY, JSON.stringify(answers)); } catch(e){} }
+function qScore(){ let s=0; for(const id in answers){ if(answers[id]===QS[id].a) s++; } return s; }
+function nextUnanswered(){ const ids=[]; for(let i=0;i<QS.length;i++){ if(!(i in answers)) ids.push(i); if(ids.length===5) break; } return ids; }
+let currentRound = [];
+function updateMeta(){ const ans=Object.keys(answers).length; document.getElementById("qscore").textContent=qScore(); document.getElementById("qans").textContent=ans; document.getElementById("qbar").style.width=(100*ans/QS.length)+"%"; }
+function renderRound(){
+  const wrap=document.getElementById("qwrap"); currentRound=nextUnanswered(); document.getElementById("qround").textContent="";
+  if(currentRound.length===0){
+    wrap.innerHTML=""; document.getElementById("qcheck").style.display="none"; document.getElementById("qnext").style.display="none";
+    const d=document.getElementById("qdone"); d.style.display="block";
+    document.getElementById("qdonetitle").textContent="🎉 All "+QS.length+" done!";
+    document.getElementById("qdonebody").textContent="Final score: "+qScore()+" / "+QS.length+(qScore()===QS.length?" — flawless! Go wire some events. 🚀":" — review the misses, then Reset to run it again.");
+    updateMeta(); return;
+  }
+  document.getElementById("qdone").style.display="none"; document.getElementById("qcheck").style.display=""; document.getElementById("qnext").style.display="none";
+  wrap.innerHTML=currentRound.map(id=>{ const x=QS[id];
+    return "<div class='q' data-id='"+id+"'><p class='qt'>"+(x.t?"<span class='tag'>"+ESC(x.t)+"</span>":"")+ESC(x.q)+"</p>"+
+      x.o.map((o,j)=>"<label><input type='radio' name='q"+id+"' value='"+j+"'> "+ESC(o)+"</label>").join("")+
+      "<p class='why'>"+ESC(x.w)+"</p></div>"; }).join("");
+  updateMeta();
+}
+function checkRound(){
+  let all=true; currentRound.forEach(id=>{ if(!document.querySelector(".q[data-id='"+id+"'] input:checked")) all=false; });
+  if(!all){ document.getElementById("qround").textContent="Answer all 5 first."; return; }
+  let correct=0;
+  currentRound.forEach(id=>{ const div=document.querySelector(".q[data-id='"+id+"']"); const sel=div.querySelector("input:checked"); const chosen=+sel.value; answers[id]=chosen;
+    const labels=div.querySelectorAll("label"); labels[QS[id].a].classList.add("right"); if(chosen!==QS[id].a) sel.closest("label").classList.add("wrong"); else correct++; div.classList.add("revealed"); });
+  saveAnswers(); updateMeta();
+  document.getElementById("qcheck").style.display="none"; document.getElementById("qnext").style.display="";
+  document.getElementById("qround").textContent="Round: "+correct+" / "+currentRound.length;
+}
+function nextRound(){ renderRound(); document.getElementById("quiz").scrollIntoView({behavior:"smooth",block:"start"}); }
+function resetQuiz(){ answers={}; saveAnswers(); renderRound(); }
+renderRound();
+</script>
+</body>
+</html>
